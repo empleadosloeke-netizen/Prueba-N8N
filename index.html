@@ -45,14 +45,15 @@ button {
 
 .error { color: red; margin-top: 10px; font-size: 18px; text-align: center; }
 .small { font-size: 14px; color: #666; text-align:center; margin-top:6px; }
+
 .aviso-label{
- margin-top:10px;
- padding:8px 12px;
- background:#fff3cd;
- border:1px solid #ffeeba;
- border-radius:6px;
- font-size:30px;
- text-align:center;
+  margin-top:10px;
+  padding:8px 12px;
+  background:#fff3cd;
+  border:1px solid #ffeeba;
+  border-radius:6px;
+  font-size:30px;
+  text-align:center;
 }
 </style>
 </head>
@@ -86,7 +87,11 @@ button {
       <div id="selectedBox" class="selected-box"></div>
       <div id="selectedDesc" class="selected-desc"></div>
     </div>
+
+    <!-- Aviso (solo label, sin input) -->
     <div id="aviso" class="hidden aviso-label"></div>
+
+    <!-- Input solo cuando aplica (picking/cajas/etc) -->
     <div id="inputArea" class="hidden">
       <div id="inputLabel" class="label"></div>
       <input id="textInput" class="text-input">
@@ -122,6 +127,7 @@ const desc = {
 
 let selected = null;
 
+// Render botones
 Object.keys(filas).forEach(rowId => {
   filas[rowId].forEach(code => {
     const d = document.createElement("div");
@@ -153,44 +159,49 @@ function selectOption(code) {
   selectedBox.innerText = code;
   selectedDesc.innerText = desc[code];
 
+  // Reset UI
   inputArea.classList.add("hidden");
   textInput.value = "";
+  textInput.placeholder = "";
 
+  // Ocultar aviso por defecto, y mostrar solo cuando aplique
+  aviso.classList.add("hidden");
+  aviso.innerText = "";
+
+  // Inputs que sí requieren texto
   if (["EP","TP","AP","TAP","CR"].includes(code)) {
     inputArea.classList.remove("hidden");
     inputLabel.innerText = "Ingresar Nro Picking";
     textInput.placeholder = "Ejemplo: A12B";
   }
-  if(["CC"].includes(code)){
+
+  if (["CC"].includes(code)) {
     inputArea.classList.remove("hidden");
-    inputLabel.innerText = "Solo Si TERMINO Ingresar Nro Picking sin la ultima letra";
+    inputLabel.innerText = "Solo si TERMINO: ingresar Nro Picking sin la última letra";
     textInput.placeholder = "Ejemplo: A12";
   }
+
   if (["RT","MG"].includes(code)) {
     inputArea.classList.remove("hidden");
     inputLabel.innerText = "Indicar Cantidad Cajas";
     textInput.placeholder = "Ejemplo: 100";
   }
-    // Aviso para marcar inicio y fin en estas opciones
-  // Mostrar aviso para estas opciones
-if (["AT","PB","Limp","PC"].includes(code)) {
-  aviso.classList.remove("hidden");
-  aviso.innerText = "Acordate de poner lo mismo al terminar";
-} else {
-    if (["Perm"].includes(code)) {
+
+  // Avisos (solo label, sin input extra)
+  if (["AT","PB","Limp","PC"].includes(code)) {
     aviso.classList.remove("hidden");
-    aviso.innerText = "Acordate de poner lo mismo si regresas en el mismo dia";
-    } else {
-      aviso.classList.add("hidden");
-    }
-}
-
-
+    aviso.innerText = "Acordate de poner lo mismo al terminar";
+  } else if (["Perm"].includes(code)) {
+    aviso.classList.remove("hidden");
+    aviso.innerText = "Acordate de poner lo mismo si regresás en el mismo día";
+  }
 }
 
 function resetSelection() {
   selected = null;
   selectedArea.classList.add("hidden");
+  aviso.classList.add("hidden");
+  aviso.innerText = "";
 }
 
 async function send() {
@@ -223,7 +234,6 @@ async function send() {
       })
     ]);
 
-    // Validar respuestas (si tu webhook responde 200/204, esto queda OK)
     if (!gsRes.ok) throw new Error("Google Script respondió con error");
     if (!n8nRes.ok) throw new Error("n8n respondió con error");
 
@@ -242,6 +252,6 @@ async function send() {
 }
 </script>
 
-
 </body>
 </html>
+
