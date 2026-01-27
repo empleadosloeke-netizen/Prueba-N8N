@@ -1,4 +1,4 @@
-<!DOCTYPE html><!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="es">
 <head>
 <meta charset="UTF-8">
@@ -44,7 +44,6 @@ button {
 .text-input::placeholder { font-size: 26px; color: #aaa; }
 
 .error { color: red; margin-top: 10px; font-size: 18px; text-align: center; }
-.small { font-size: 14px; color: #666; text-align:center; margin-top:6px; }
 
 .aviso-label{
   margin-top:10px;
@@ -60,18 +59,13 @@ button {
 
 <body>
 
-<!-- ================= LEGAJO ================= -->
 <div id="legajoScreen">
   <h1>Ingresá tu número de legajo</h1>
   <input id="legajoInput" type="number" inputmode="numeric">
   <button class="primary-btn" onclick="goToOptions()">Continuar</button>
-  <div class="small" id="status"></div>
-  <div id="legajoError" class="error"></div>
 </div>
 
-<!-- ================= OPCIONES ================= -->
 <div id="optionsScreen" class="hidden">
-
   <div class="top-bar">
     <div class="back-top" onclick="backToLegajo()">←</div>
   </div>
@@ -81,17 +75,14 @@ button {
   <div class="row row-5" id="row3"></div>
 
   <div id="selectedArea" class="hidden">
-
     <div class="selected-container">
       <div class="back-arrow" onclick="resetSelection()">←</div>
       <div id="selectedBox" class="selected-box"></div>
       <div id="selectedDesc" class="selected-desc"></div>
     </div>
 
-    <!-- Aviso (solo label, sin input) -->
     <div id="aviso" class="hidden aviso-label"></div>
 
-    <!-- Input solo cuando aplica (picking/cajas/etc) -->
     <div id="inputArea" class="hidden">
       <div id="inputLabel" class="label"></div>
       <input id="textInput" class="text-input">
@@ -99,16 +90,11 @@ button {
 
     <button class="primary-btn" onclick="send()">Enviar</button>
     <div id="error" class="error"></div>
-
   </div>
 </div>
 
 <script>
-const GOOGLE_SCRIPT_URL =
-"https://script.google.com/macros/s/AKfycbwtBRC-bEeVkFNa8MQnJwJr_L4DalBVoS6N8H9C1Z0vh2CLI29Sep7ZZIIVKz6eOGzj/exec";
-
-const N8N_WEBHOOK_URL =
-"https://forms.elias-page.com/webhook/fd491b4e-adb6-435e-870e-81f4347457ed";
+const N8N_WEBHOOK_URL = "https://forms.elias-page.com/webhook/fd491b4e-adb6-435e-870e-81f4347457ed";
 
 const filas = {
   row1: ["EP","TP","AP","TAP","CR","CC"],
@@ -127,15 +113,11 @@ const desc = {
 
 let selected = null;
 
-// Render botones
 Object.keys(filas).forEach(rowId => {
   filas[rowId].forEach(code => {
     const d = document.createElement("div");
     d.className = "box";
-    d.innerHTML = `
-      <div class="box-title">${code}</div>
-      <div class="box-desc">${desc[code]}</div>
-    `;
+    d.innerHTML = `<div class="box-title">${code}</div><div class="box-desc">${desc[code]}</div>`;
     d.onclick = () => selectOption(code);
     document.getElementById(rowId).appendChild(d);
   });
@@ -155,43 +137,30 @@ function backToLegajo() {
 function selectOption(code) {
   selected = code;
   selectedArea.classList.remove("hidden");
-
   selectedBox.innerText = code;
   selectedDesc.innerText = desc[code];
 
-  // Reset UI
   inputArea.classList.add("hidden");
-  textInput.value = "";
-  textInput.placeholder = "";
-
-  // Ocultar aviso por defecto, y mostrar solo cuando aplique
   aviso.classList.add("hidden");
-  aviso.innerText = "";
+  textInput.value = "";
 
-  // Inputs que sí requieren texto
   if (["EP","TP","AP","TAP","CR"].includes(code)) {
     inputArea.classList.remove("hidden");
     inputLabel.innerText = "Ingresar Nro Picking";
-    textInput.placeholder = "Ejemplo: A12B";
   }
-
   if (["CC"].includes(code)) {
     inputArea.classList.remove("hidden");
-    inputLabel.innerText = "Solo si TERMINO: ingresar Nro Picking sin la última letra";
-    textInput.placeholder = "Ejemplo: A12";
+    inputLabel.innerText = "Solo si TERMINO: Nro Picking sin última letra";
   }
-
   if (["RT","MG"].includes(code)) {
     inputArea.classList.remove("hidden");
     inputLabel.innerText = "Indicar Cantidad Cajas";
-    textInput.placeholder = "Ejemplo: 100";
   }
 
-  // Avisos (solo label, sin input extra)
   if (["AT","PB","Limp","PC"].includes(code)) {
     aviso.classList.remove("hidden");
     aviso.innerText = "Acordate de poner lo mismo al terminar";
-  } else if (["Perm"].includes(code)) {
+  } else if (code === "Perm") {
     aviso.classList.remove("hidden");
     aviso.innerText = "Acordate de poner lo mismo si regresás en el mismo día";
   }
@@ -200,15 +169,10 @@ function selectOption(code) {
 function resetSelection() {
   selected = null;
   selectedArea.classList.add("hidden");
-  aviso.classList.add("hidden");
-  aviso.innerText = "";
 }
 
 async function send() {
-  if (!selected) {
-    error.innerText = "Seleccioná una opción";
-    return;
-  }
+  if (!selected) return error.innerText = "Seleccioná una opción";
   error.innerText = "";
 
   const payload = {
@@ -220,26 +184,16 @@ async function send() {
   };
 
   try {
-    // Enviar a ambos (en paralelo)
-    const [gsRes, n8nRes] = await Promise.all([
-      fetch(GOOGLE_SCRIPT_URL, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      }),
-      fetch(N8N_WEBHOOK_URL, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      })
-    ]);
+    const res = await fetch(N8N_WEBHOOK_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    });
 
-    if (!gsRes.ok) throw new Error("Google Script respondió con error");
-    if (!n8nRes.ok) throw new Error("n8n respondió con error");
+    if (!res.ok) throw new Error(res.status);
 
     alert("Reporte enviado correctamente");
 
-    // volver a inicio
     resetSelection();
     optionsScreen.classList.add("hidden");
     legajoScreen.classList.remove("hidden");
@@ -254,5 +208,3 @@ async function send() {
 
 </body>
 </html>
-
-
