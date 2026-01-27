@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Reporte Empleados</title>
+
+<style>
+body { font-family: Arial, sans-serif; margin: 0; padding: 12px; }
+.hidden { display: none; }
+
+button {
+  width: 100%;
+  padding: 16px;
+  font-size: 22px;
+  margin-top: 14px;
+  border-radius: 6px;
+}
+
+.primary-btn { background: #1e6bd6; color: white; border: none; }
+
+#legajoScreen h1 { font-size: 36px; text-align: center; }
+#legajoInput { width: 100%; font-size: 34px; padding: 12px; text-align: center; border: 6px solid; }
+
+.row { display: grid; gap: 8px; margin-top: 13px; }
+.row-6 { grid-template-columns: repeat(6, 1fr); }
+.row-5 { grid-template-columns: repeat(5, 1fr); }
+.row-4 { grid-template-columns: repeat(4, 1fr); }
+
+.box { border: 2px solid #333; padding: 8px 4px; text-align: center; cursor: pointer; }
+.box-title { font-size: 18px; font-weight: bold; }
+.box-desc { font-size: 10px; margin-top: 3px; }
+
+.top-bar { display: flex; align-items: center; margin-bottom: 6px; }
+.back-top { font-size: 28px; cursor: pointer; }
+
+.selected-container { display: flex; align-items: center; justify-content: center; margin-top: 16px; }
+.back-arrow { font-size: 32px; cursor: pointer; margin-right: 10px; }
+.selected-box { border: 2px solid #333; padding: 10px 22px; font-size: 28px; font-weight: bold; color: #1e6bd6; }
+.selected-desc { margin-left: 12px; font-size: 18px; font-weight: bold; }
+
+.label { margin-top: 14px; font-size: 22px; text-align: center; white-space: pre-line; }
+.text-input { width: 100%; height: 68px; font-size: 64px ; border:6px solid ; text-align: center; margin-top: 8px; text-transform: uppercase; }
+.text-input::placeholder { font-size: 26px; color: #aaa; }
+
+.error { color: red; margin-top: 10px; font-size: 18px; text-align: center; }
+.small { font-size: 14px; color: #666; text-align:center; margin-top:6px; }
+.aviso-label{
+ margin-top:10px;
+ padding:8px 12px;
+ background:#fff3cd;
+ border:1px solid #ffeeba;
+ border-radius:6px;
+ font-size:30px;
+ text-align:center;
+}
+</style>
+</head>
+
+<body>
+
+<!-- ================= LEGAJO ================= -->
+<div id="legajoScreen">
+  <h1>Ingresá tu número de legajo</h1>
+  <input id="legajoInput" type="number" inputmode="numeric">
+  <button class="primary-btn" onclick="goToOptions()">Continuar</button>
+  <div class="small" id="status"></div>
+  <div id="legajoError" class="error"></div>
+</div>
+
+<!-- ================= OPCIONES ================= -->
+<div id="optionsScreen" class="hidden">
+
+  <div class="top-bar">
+    <div class="back-top" onclick="backToLegajo()">←</div>
+  </div>
+
+  <div class="row row-6" id="row1"></div>
+  <div class="row row-4" id="row2"></div>
+  <div class="row row-5" id="row3"></div>
+
+  <div id="selectedArea" class="hidden">
+
+    <div class="selected-container">
+      <div class="back-arrow" onclick="resetSelection()">←</div>
+      <div id="selectedBox" class="selected-box"></div>
+      <div id="selectedDesc" class="selected-desc"></div>
+    </div>
+    <div id="aviso" class="hidden aviso-label"></div>
+    <div id="inputArea" class="hidden">
+      <div id="inputLabel" class="label"></div>
+      <input id="textInput" class="text-input">
+    </div>
+
+    <button class="primary-btn" onclick="send()">Enviar</button>
+    <div id="error" class="error"></div>
+
+  </div>
+</div>
+
+<script>
+const GOOGLE_SCRIPT_URL =
+"https://script.google.com/macros/s/AKfycbwtBRC-bEeVkFNa8MQnJwJr_L4DalBVoS6N8H9C1Z0vh2CLI29Sep7ZZIIVKz6eOGzj/exec";
+
+const N8N_WEBHOOK_URL =
+"https://forms.elias-page.com/webhook/fd491b4e-adb6-435e-870e-81f4347457ed";
+
+const filas = {
+  row1: ["EP","TP","AP","TAP","CR","CC"],
+  row2: ["RT","MG","RI","EI"],
+  row3: ["AT","PB","Limp","Perm","PC"]
+};
+
+const desc = {
+  EP:"Empecé Picking", TP:"Fin Picking", AP:"Empecé Armado Pedido",
+  TAP:"Terminé Armado Pedido", CR:"Control Remitos", CC:"Inicio/Fin Carga Camión",
+  RT:"Recepción Mercadería", MG:"Guardado a Góndola",
+  RI:"Recepción Insumos", EI:"Entrega Insumos",
+  AT:"Atendí Timbre", PB:"Paré Baño", Limp:"Limpieza",
+  Perm:"Permiso de Salida", PC:"Paré Comida"
+};
+
+let selected = null;
+
+Object.keys(filas).forEach(rowId => {
+  filas[rowId].forEach(code => {
+    const d = document.createElement("div");
+    d.className = "box";
+    d.innerHTML = `
+      <div class="box-title">${code}</div>
+      <div class="box-desc">${desc[code]}</div>
+    `;
+    d.onclick = () => selectOption(code);
+    document.getElementById(rowId).appendChild(d);
+  });
+});
+
+function goToOptions() {
+  if (!legajoInput.value) return alert("Ingresá el número de legajo");
+  legajoScreen.classList.add("hidden");
+  optionsScreen.classList.remove("hidden");
+}
+
+function backToLegajo() {
+  optionsScreen.classList.add("hidden");
+  legajoScreen.classList.remove("hidden");
+}
+
+function selectOption(code) {
+  selected = code;
+  selectedArea.classList.remove("hidden");
+
+  selectedBox.innerText = code;
+  selectedDesc.innerText = desc[code];
+
+  inputArea.classList.add("hidden");
+  textInput.value = "";
+
+  if (["EP","TP","AP","TAP","CR"].includes(code)) {
+    inputArea.classList.remove("hidden");
+    inputLabel.innerText = "Ingresar Nro Picking";
+    textInput.placeholder = "Ejemplo: A12B";
+  }
+  if(["CC"].includes(code)){
+    inputArea.classList.remove("hidden");
+    inputLabel.innerText = "Solo Si TERMINO Ingresar Nro Picking sin la ultima letra";
+    textInput.placeholder = "Ejemplo: A12";
+  }
+  if (["RT","MG"].includes(code)) {
+    inputArea.classList.remove("hidden");
+    inputLabel.innerText = "Indicar Cantidad Cajas";
+    textInput.placeholder = "Ejemplo: 100";
+  }
+    // Aviso para marcar inicio y fin en estas opciones
+  // Mostrar aviso para estas opciones
+if (["AT","PB","Limp","PC"].includes(code)) {
+  aviso.classList.remove("hidden");
+  aviso.innerText = "Acordate de poner lo mismo al terminar";
+} else {
+    if (["Perm"].includes(code)) {
+    aviso.classList.remove("hidden");
+    aviso.innerText = "Acordate de poner lo mismo si regresas en el mismo dia";
+    } else {
+      aviso.classList.add("hidden");
+    }
+}
+
+
+}
+
+function resetSelection() {
+  selected = null;
+  selectedArea.classList.add("hidden");
+}
+
+async function send() {
+  if (!selected) {
+    error.innerText = "Seleccioná una opción";
+    return;
+  }
+  error.innerText = "";
+
+  const payload = {
+    legajo: legajoInput.value,
+    opcion: selected,
+    descripcion: desc[selected],
+    texto: (textInput.value || "").toUpperCase(),
+    ts: new Date().toISOString()
+  };
+
+  try {
+    // Enviar a ambos (en paralelo)
+    const [gsRes, n8nRes] = await Promise.all([
+      fetch(GOOGLE_SCRIPT_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      }),
+      fetch(N8N_WEBHOOK_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      })
+    ]);
+
+    // Validar respuestas (si tu webhook responde 200/204, esto queda OK)
+    if (!gsRes.ok) throw new Error("Google Script respondió con error");
+    if (!n8nRes.ok) throw new Error("n8n respondió con error");
+
+    alert("Reporte enviado correctamente");
+
+    // volver a inicio
+    resetSelection();
+    optionsScreen.classList.add("hidden");
+    legajoScreen.classList.remove("hidden");
+    legajoInput.value = "";
+
+  } catch (e) {
+    console.error(e);
+    alert("No se pudo enviar el reporte. Revisá WiFi o avisá al supervisor.");
+  }
+}
+</script>
+
+
+</body>
+</html>
