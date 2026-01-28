@@ -1,87 +1,100 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Reporte Empleados</title>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Registro Producción</title>
 
 <style>
-body { font-family: Arial, sans-serif; margin: 0; padding: 12px; }
-.hidden { display: none; }
+  body{font-family:Arial,sans-serif;margin:0;padding:12px;}
+  .hidden{display:none;}
 
-button {
-  width: 100%;
-  padding: 16px;
-  font-size: 22px;
-  margin-top: 14px;
-  border-radius: 6px;
-}
+  button{
+    width:100%;padding:16px;font-size:22px;
+    margin-top:14px;border-radius:6px;
+  }
+  .primary-btn{background:#1e6bd6;color:#fff;border:none;}
 
-.primary-btn { background: #1e6bd6; color: white; border: none; }
+  #legajoScreen h1{font-size:34px;text-align:center;}
+  #legajoInput{width:100%;font-size:32px;padding:12px;text-align:center;}
 
-#legajoScreen h1 { font-size: 36px; text-align: center; }
-#legajoInput { width: 100%; font-size: 34px; padding: 12px; text-align: center; border: 6px solid; }
+  .row{display:grid;gap:10px;margin-top:12px;}
+  .row-2{grid-template-columns:repeat(2,1fr);}
+  .row-5{grid-template-columns:repeat(5,1fr);}
+  .row-6{grid-template-columns:repeat(6,1fr);}
 
-.row { display: grid; gap: 8px; margin-top: 13px; }
-.row-6 { grid-template-columns: repeat(6, 1fr); }
-.row-5 { grid-template-columns: repeat(5, 1fr); }
-.row-4 { grid-template-columns: repeat(4, 1fr); }
+  .box{
+    border:2px solid #333;
+    padding:12px 6px;
+    text-align:center;
+    cursor:pointer;
+    user-select:none;
+  }
+  .box-title{font-size:20px;font-weight:bold;}
+  .box-desc{font-size:11px;margin-top:4px;}
 
-.box { border: 2px solid #333; padding: 8px 4px; text-align: center; cursor: pointer; }
-.box-title { font-size: 18px; font-weight: bold; }
-.box-desc { font-size: 10px; margin-top: 3px; }
+  .top-bar{display:flex;align-items:center;margin-bottom:6px;}
+  .back-top{font-size:26px;cursor:pointer;}
+  .back-label{font-size:14px;margin-left:8px;color:#444;cursor:pointer;}
 
-.top-bar { display: flex; align-items: center; margin-bottom: 6px; }
-.back-top { font-size: 28px; cursor: pointer; }
+  .selected-container{
+    display:flex;align-items:center;justify-content:center;margin-top:16px;
+  }
+  .back-arrow{font-size:30px;cursor:pointer;margin-right:10px;}
+  .selected-box{
+    border:2px solid #333;
+    padding:10px 22px;
+    font-size:28px;font-weight:bold;
+    color:#1e6bd6;
+  }
+  .selected-desc{
+    margin-left:12px;font-size:18px;font-weight:bold;
+  }
 
-.selected-container { display: flex; align-items: center; justify-content: center; margin-top: 16px; }
-.back-arrow { font-size: 32px; cursor: pointer; margin-right: 10px; }
-.selected-box { border: 2px solid #333; padding: 10px 22px; font-size: 28px; font-weight: bold; color: #1e6bd6; }
-.selected-desc { margin-left: 12px; font-size: 18px; font-weight: bold; }
-
-.label { margin-top: 14px; font-size: 22px; text-align: center; white-space: pre-line; }
-.text-input { width: 100%; height: 68px; font-size: 64px ; border:6px solid ; text-align: center; margin-top: 8px; text-transform: uppercase; }
-.text-input::placeholder { font-size: 26px; color: #aaa; }
-
-.error { color: red; margin-top: 10px; font-size: 18px; text-align: center; }
-
-.aviso-label{
-  margin-top:10px;
-  padding:8px 12px;
-  background:#fff3cd;
-  border:1px solid #ffeeba;
-  border-radius:6px;
-  font-size:30px;
-  text-align:center;
-}
+  .label{margin-top:14px;font-size:22px;text-align:center;}
+  .text-input{
+    width:100%;height:70px;font-size:64px;
+    text-align:center;margin-top:8px;
+  }
+  .text-input::placeholder{font-size:26px;color:#aaa;}
+  .error{color:red;margin-top:8px;font-size:18px;}
 </style>
 </head>
 
 <body>
 
+<!-- LEGAJO -->
 <div id="legajoScreen">
   <h1>Ingresá tu número de legajo</h1>
   <input id="legajoInput" type="number" inputmode="numeric">
   <button class="primary-btn" onclick="goToOptions()">Continuar</button>
+  <div id="legajoError" class="error"></div>
 </div>
 
+<!-- OPCIONES -->
 <div id="optionsScreen" class="hidden">
+
   <div class="top-bar">
     <div class="back-top" onclick="backToLegajo()">←</div>
+    <div class="back-label" onclick="backToLegajo()">Volver a pantalla inicial</div>
   </div>
 
-  <div class="row row-6" id="row1"></div>
-  <div class="row row-4" id="row2"></div>
-  <div class="row row-5" id="row3"></div>
+  <!-- NIVEL 1 -->
+  <div class="row row-2" id="row1"></div>
+
+  <!-- NIVEL 2 -->
+  <div class="row row-5" id="row2"></div>
+
+  <!-- NIVEL 3 -->
+  <div class="row row-6" id="row3"></div>
 
   <div id="selectedArea" class="hidden">
+
     <div class="selected-container">
       <div class="back-arrow" onclick="resetSelection()">←</div>
       <div id="selectedBox" class="selected-box"></div>
       <div id="selectedDesc" class="selected-desc"></div>
     </div>
-
-    <div id="aviso" class="hidden aviso-label"></div>
 
     <div id="inputArea" class="hidden">
       <div id="inputLabel" class="label"></div>
@@ -91,119 +104,238 @@ button {
     <button class="primary-btn" onclick="send()">Enviar</button>
     <div id="error" class="error"></div>
   </div>
+
 </div>
 
 <script>
-const N8N_WEBHOOK_URL = "https://forms.elias-page.com/webhook/fd491b4e-adb6-435e-870e-81f4347457ed";
+/* ========= CONFIG ========= */
+const GOOGLE_SCRIPT_URL = "PEGAR_ACA_TU_URL_DEL_SCRIPT"; // <-- IMPORTANTE
 
-const filas = {
-  row1: ["EP","TP","AP","TAP","CR","CC"],
-  row2: ["RT","MG","RI","EI"],
-  row3: ["AT","PB","Limp","Perm","PC"]
-};
+// EJEMPLO. Reemplazá por tus opciones reales manteniendo esta estructura:
+const OPTIONS = [
+  // Nivel 1 (2 botones)
+  { level: 1, code: "E", desc: "Entrada", parent: null },
+  { level: 1, code: "S", desc: "Salida",  parent: null },
 
-const desc = {
-  EP:"Empecé Picking", TP:"Fin Picking", AP:"Empecé Armado Pedido",
-  TAP:"Terminé Armado Pedido", CR:"Control Remitos", CC:"Inicio/Fin Carga Camión",
-  RT:"Recepción Mercadería", MG:"Guardado a Góndola",
-  RI:"Recepción Insumos", EI:"Entrega Insumos",
-  AT:"Atendí Timbre", PB:"Paré Baño", Limp:"Limpieza",
-  Perm:"Permiso de Salida", PC:"Paré Comida"
-};
+  // Nivel 2 (depende del nivel 1)
+  { level: 2, code: "E1", desc: "Linea 1", parent: "E" },
+  { level: 2, code: "E2", desc: "Linea 2", parent: "E" },
+  { level: 2, code: "S1", desc: "Linea 1", parent: "S" },
+  { level: 2, code: "S2", desc: "Linea 2", parent: "S" },
 
+  // Nivel 3 (depende del nivel 2) + input
+  { level: 3, code: "E1A", desc: "Operación A", parent: "E1", input: { show:true, label:"Cantidad", placeholder:"0", validate:/^\d+$/ } },
+  { level: 3, code: "E1B", desc: "Operación B", parent: "E1", input: { show:false, label:"", placeholder:"", validate:/^\d+$/ } },
+  { level: 3, code: "S1A", desc: "Operación A", parent: "S1", input: { show:true, label:"Cantidad", placeholder:"0", validate:/^\d+$/ } },
+];
+
+/* ========= DOM ========= */
+const legajoScreen  = document.getElementById("legajoScreen");
+const optionsScreen = document.getElementById("optionsScreen");
+
+const legajoInput  = document.getElementById("legajoInput");
+const legajoError  = document.getElementById("legajoError");
+
+const row1 = document.getElementById("row1");
+const row2 = document.getElementById("row2");
+const row3 = document.getElementById("row3");
+
+const selectedArea = document.getElementById("selectedArea");
+const selectedBox  = document.getElementById("selectedBox");
+const selectedDesc = document.getElementById("selectedDesc");
+
+const inputArea   = document.getElementById("inputArea");
+const inputLabel  = document.getElementById("inputLabel");
+const textInput   = document.getElementById("textInput");
+
+const error = document.getElementById("error");
+
+/* ========= STATE ========= */
+let pickedL1 = null;
+let pickedL2 = null;
 let selected = null;
 
-Object.keys(filas).forEach(rowId => {
-  filas[rowId].forEach(code => {
-    const d = document.createElement("div");
-    d.className = "box";
-    d.innerHTML = `<div class="box-title">${code}</div><div class="box-desc">${desc[code]}</div>`;
-    d.onclick = () => selectOption(code);
-    document.getElementById(rowId).appendChild(d);
-  });
-});
-
-function goToOptions() {
-  if (!legajoInput.value) return alert("Ingresá el número de legajo");
-  legajoScreen.classList.add("hidden");
-  optionsScreen.classList.remove("hidden");
+/* ========= UI HELPERS ========= */
+function mkBox(opt, onClick){
+  const d = document.createElement("div");
+  d.className = "box";
+  d.onclick = onClick;
+  d.innerHTML = `
+    <div class="box-title">${opt.code}</div>
+    <div class="box-desc">${opt.desc}</div>
+  `;
+  return d;
 }
 
-function backToLegajo() {
-  optionsScreen.classList.add("hidden");
-  legajoScreen.classList.remove("hidden");
-}
-
-function selectOption(code) {
-  selected = code;
-  selectedArea.classList.remove("hidden");
-  selectedBox.innerText = code;
-  selectedDesc.innerText = desc[code];
-
-  inputArea.classList.add("hidden");
-  aviso.classList.add("hidden");
-  textInput.value = "";
-
-  if (["EP","TP","AP","TAP","CR"].includes(code)) {
-    inputArea.classList.remove("hidden");
-    inputLabel.innerText = "Ingresar Nro Picking";
-  }
-  if (["CC"].includes(code)) {
-    inputArea.classList.remove("hidden");
-    inputLabel.innerText = "Solo si TERMINO: Nro Picking sin última letra";
-  }
-  if (["RT","MG"].includes(code)) {
-    inputArea.classList.remove("hidden");
-    inputLabel.innerText = "Indicar Cantidad Cajas";
-  }
-
-  if (["AT","PB","Limp","PC"].includes(code)) {
-    aviso.classList.remove("hidden");
-    aviso.innerText = "Acordate de poner lo mismo al terminar";
-  } else if (code === "Perm") {
-    aviso.classList.remove("hidden");
-    aviso.innerText = "Acordate de poner lo mismo si regresás en el mismo día";
-  }
-}
-
-function resetSelection() {
-  selected = null;
+function renderLevel1(){
+  row1.innerHTML = "";
+  row2.innerHTML = "";
+  row3.innerHTML = "";
   selectedArea.classList.add("hidden");
-}
-
-async function send() {
-  if (!selected) return error.innerText = "Seleccioná una opción";
+  inputArea.classList.add("hidden");
   error.innerText = "";
 
+  const l1 = OPTIONS.filter(o => o.level === 1);
+  l1.forEach(opt => row1.appendChild(mkBox(opt, () => {
+    pickedL1 = opt.code;
+    pickedL2 = null;
+    selected = null;
+    renderLevel2();
+  })));
+}
+
+function renderLevel2(){
+  row2.innerHTML = "";
+  row3.innerHTML = "";
+  selectedArea.classList.add("hidden");
+  inputArea.classList.add("hidden");
+  error.innerText = "";
+
+  const l2 = OPTIONS.filter(o => o.level === 2 && o.parent === pickedL1);
+  l2.forEach(opt => row2.appendChild(mkBox(opt, () => {
+    pickedL2 = opt.code;
+    selected = null;
+    renderLevel3();
+  })));
+}
+
+function renderLevel3(){
+  row3.innerHTML = "";
+  selectedArea.classList.add("hidden");
+  inputArea.classList.add("hidden");
+  error.innerText = "";
+
+  const l3 = OPTIONS.filter(o => o.level === 3 && o.parent === pickedL2);
+  l3.forEach(opt => row3.appendChild(mkBox(opt, () => selectOption(opt))));
+}
+
+/* ========= NAV ========= */
+function goToOptions(){
+  legajoError.innerText = "";
+
+  const legajo = String(legajoInput.value || "").trim();
+  if(!legajo){
+    legajoError.innerText = "Ingresá tu legajo para continuar.";
+    return;
+  }
+
+  // Mostrar pantalla 2
+  legajoScreen.classList.add("hidden");
+  optionsScreen.classList.remove("hidden");
+
+  // Render inicial
+  pickedL1 = null;
+  pickedL2 = null;
+  selected = null;
+  renderLevel1();
+}
+
+function backToLegajo(){
+  // Volver a pantalla 1
+  optionsScreen.classList.add("hidden");
+  legajoScreen.classList.remove("hidden");
+
+  // Reset visual
+  pickedL1 = null;
+  pickedL2 = null;
+  selected = null;
+  row1.innerHTML = ""; row2.innerHTML = ""; row3.innerHTML = "";
+  selectedArea.classList.add("hidden");
+  inputArea.classList.add("hidden");
+  error.innerText = "";
+  legajoError.innerText = "";
+}
+
+function selectOption(opt){
+  selected = opt;
+
+  selectedArea.classList.remove("hidden");
+  selectedBox.innerText = opt.code;
+  selectedDesc.innerText = opt.desc;
+
+  error.innerText = "";
+  textInput.value = "";
+
+  const inp = opt.input || {show:false, label:"", placeholder:"", validate:/^\d+$/};
+
+  if(inp.show){
+    inputArea.classList.remove("hidden");
+    inputLabel.innerText = inp.label || "";
+    textInput.placeholder = inp.placeholder || "";
+    textInput.type = "number";
+    textInput.inputMode = "numeric";
+  } else {
+    inputArea.classList.add("hidden");
+  }
+}
+
+function resetSelection(){
+  selected = null;
+  selectedArea.classList.add("hidden");
+  inputArea.classList.add("hidden");
+  error.innerText = "";
+}
+
+/* ========= SEND ========= */
+async function send(){
+  if(!selected) return;
+
+  const inp = selected.input || {show:false, validate:/^\d+$/};
+
+  let texto = String(textInput.value || "").trim();
+
+  if(inp.show){
+    if(!inp.validate.test(texto)){
+      error.innerText = "Solo se permiten números";
+      return;
+    }
+  } else {
+    texto = "";
+  }
+
   const payload = {
-    legajo: legajoInput.value,
-    opcion: selected,
-    descripcion: desc[selected],
-    texto: (textInput.value || "").toUpperCase(),
+    legajo: String(legajoInput.value || "").trim(),
+    opcion: selected.code,
+    descripcion: selected.desc,
+    texto: texto,
     ts: new Date().toISOString()
   };
 
-  try {
-    const res = await fetch(N8N_WEBHOOK_URL, {
+  const controller = new AbortController();
+  const t = setTimeout(() => controller.abort(), 10000);
+
+  try{
+    const res = await fetch(GOOGLE_SCRIPT_URL, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload)
+      body: JSON.stringify(payload),
+      signal: controller.signal
     });
 
-    if (!res.ok) throw new Error(res.status);
+    clearTimeout(t);
 
-    alert("Reporte enviado correctamente");
+    if(!res.ok){
+      error.innerText = `No se pudo enviar (HTTP ${res.status}). Revisá WiFi o avisá al supervisor.`;
+      return;
+    }
+
+    alert("Registro enviado correctamente");
 
     resetSelection();
     optionsScreen.classList.add("hidden");
     legajoScreen.classList.remove("hidden");
     legajoInput.value = "";
 
-  } catch (e) {
-    console.error(e);
-    alert("No se pudo enviar el reporte. Revisá WiFi o avisá al supervisor.");
+  } catch(e){
+    clearTimeout(t);
+    error.innerText = "No se pudo enviar. Revisá WiFi o avisá al supervisor.";
   }
 }
+
+// (Opcional) Enter en legajo para continuar
+legajoInput.addEventListener("keydown", (e) => {
+  if(e.key === "Enter") goToOptions();
+});
 </script>
 
 </body>
