@@ -94,26 +94,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
   let selected = null;
 
-  /* ================= COOKIES ================= */
-  const COOKIE_NAME = "prod_day_state_v7";
-  const QUEUE_COOKIE = "prod_send_queue_v1"; // cola simple para reintentar
-  const COOKIE_DAYS = 365;
-
-  function setCookie(name, value, days) {
-    const d = new Date();
-    d.setTime(d.getTime() + (days * 24*60*60*1000));
-    const expires = "expires=" + d.toUTCString();
-    document.cookie = `${name}=${encodeURIComponent(value)}; ${expires}; path=/; SameSite=Lax`;
-  }
-
-  function getCookie(name) {
-    const cookies = document.cookie ? document.cookie.split("; ") : [];
-    for (const c of cookies) {
-      const [k, ...rest] = c.split("=");
-      if (k === name) return decodeURIComponent(rest.join("="));
-    }
-    return "";
-  }
+  /* ================= localStorage (ESTADO + COLA) ================= */
+  const LS_STATE_KEY = "prod_day_state_ls_v1";
+  const LS_QUEUE_KEY = "prod_send_queue_ls_v1";
 
   function freshDayState() {
     return {
@@ -127,7 +110,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   function readState() {
     try {
-      const raw = getCookie(COOKIE_NAME);
+      const raw = localStorage.getItem(LS_STATE_KEY);
       if (!raw) return freshDayState();
       const obj = JSON.parse(raw);
       if (!obj || typeof obj !== "object") return freshDayState();
@@ -144,13 +127,12 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   function writeState(state) {
-    setCookie(COOKIE_NAME, JSON.stringify(state), COOKIE_DAYS);
+    localStorage.setItem(LS_STATE_KEY, JSON.stringify(state));
   }
 
-  /* ================= COLA (para no perder envíos) ================= */
   function readQueue() {
     try {
-      const raw = getCookie(QUEUE_COOKIE);
+      const raw = localStorage.getItem(LS_QUEUE_KEY);
       if (!raw) return [];
       const arr = JSON.parse(raw);
       return Array.isArray(arr) ? arr : [];
@@ -160,14 +142,13 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   function writeQueue(arr) {
-    setCookie(QUEUE_COOKIE, JSON.stringify(arr), COOKIE_DAYS);
+    localStorage.setItem(LS_QUEUE_KEY, JSON.stringify(arr.slice(-50)));
   }
 
   function enqueue(payload) {
     const q = readQueue();
     q.push(payload);
-    // limitamos a 30 para que el cookie no se haga gigante
-    writeQueue(q.slice(-30));
+    writeQueue(q);
   }
 
   function dequeueOne() {
@@ -250,7 +231,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     daySummary.className = "";
     daySummary.innerHTML = [
-      qLen ? `<div class="day-item"><div class="t1">Pendientes de envío</div><div class="t2"><b>${qLen}</b> (se reintentan automáticamente)</div></div>` : "",
+      qLen ? `<div class="day-item"><div class="t1">Pendientes de envío</div><div class="t2"><b>${qLen}</b> (se reintentan)</div></div>` : "",
       block("Última Matriz (E)", s.lastMatrix),
       block("Último Cajón (C)", s.lastCajon),
       last2Block("Últimos 2 mensajes del día", s.last2),
@@ -369,8 +350,8 @@ document.addEventListener("DOMContentLoaded", () => {
     return { ok: true, isSecondSameDowntime: true, downtimeTs: ld.ts || "" };
   }
 
-  /* ================= ENVÍO RÁPIDO ================= */
-  function updateCookiesAfterSend(payload) {
+  /* ================= COOKIES-LOGIC -> STATE UPDATE ================= */
+  function updateStateAfterSend(payload) {
     const s = readState();
     const item = {
       opcion: payload.opcion,
@@ -379,11 +360,9 @@ document.addEventListener("DOMContentLoaded", () => {
       ts: payload.tsEvent
     };
 
-    // últimos 2
     s.last2.unshift(item);
     s.last2 = s.last2.slice(0, 2);
 
-    // E: si cambia respecto al anterior => borrar lastCajon
     if (payload.opcion === "E") {
       if (s.lastMatrix && String(s.lastMatrix.texto||"") !== String(item.texto||"")) {
         s.lastCajon = null;
@@ -392,43 +371,34 @@ document.addEventListener("DOMContentLoaded", () => {
       s.lastDowntime = null;
     }
 
-    // C: actualiza cajón y limpia downtime
     if (payload.opcion === "C") {
       s.lastCajon = item;
       s.lastDowntime = null;
     }
 
-    // Perm/RM/RD limpian downtime
     if (NON_DOWNTIME_CODES.has(payload.opcion) && payload.opcion !== "E" && payload.opcion !== "C") {
       s.lastDowntime = null;
     }
 
-    // Downtime
     if (isDowntime(payload)) {
-      if (!s.lastDowntime) {
-        s.lastDowntime = item;
-      } else if (sameDowntime(s.lastDowntime, payload)) {
-        s.lastDowntime = null; // segunda vez: limpia
-      } else {
-        s.lastDowntime = item;
-      }
+      if (!s.lastDowntime) s.lastDowntime = item;
+      else if (sameDowntime(s.lastDowntime, payload)) s.lastDowntime = null;
+      else s.lastDowntime = item;
     }
 
     writeState(s);
   }
 
   async function postToSheet(payload) {
-    // En no-cors no podés leer respuesta, pero la petición igual sale.
     return fetch(GOOGLE_SHEET_WEBAPP_URL, {
       method: "POST",
       headers: { "Content-Type": "text/plain;charset=utf-8" },
       body: JSON.stringify(payload),
       mode: "no-cors",
-      keepalive: true // ayuda si cambia de pantalla rápido
+      keepalive: true
     });
   }
 
-  // Reintento liviano: intenta mandar 1 pendiente por vez
   async function flushQueueOnce() {
     const q = readQueue();
     if (!q.length) return;
@@ -436,14 +406,14 @@ document.addEventListener("DOMContentLoaded", () => {
     const item = q[0];
     try {
       await postToSheet(item);
-      // lo damos por enviado
       dequeueOne();
       renderSummary();
     } catch {
-      // si falla, lo dejamos en cola
+      // lo dejamos pendiente
     }
   }
 
+  /* ================= ENVÍO RÁPIDO ================= */
   async function sendFast() {
     if (!selected) return;
 
@@ -469,7 +439,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const stateBefore = readState();
 
-    // ✅ BLOQUEO: si es Cajón y NO hay matriz => no deja enviar
+    // ✅ BLOQUEO: C sin matriz
     if (payload.opcion === "C") {
       if (!stateBefore.lastMatrix || !stateBefore.lastMatrix.ts) {
         alert('Primero tenés que enviar "E (Empecé Matriz)" antes de registrar un Cajón.');
@@ -485,25 +455,25 @@ document.addEventListener("DOMContentLoaded", () => {
       payload.tInicio = v.downtimeTs || "";
     }
 
-    // ✅ UI INSTANTÁNEA
+    // UI instantánea
     btnEnviar.disabled = true;
     const prevText = btnEnviar.innerText;
     btnEnviar.innerText = "Enviando...";
 
-    // 1) Actualizo cookies YA
-    updateCookiesAfterSend(payload);
+    // 1) Estado local inmediato
+    updateStateAfterSend(payload);
     renderSummary();
 
-    // 2) Vuelvo YA a pantalla inicial
+    // 2) volver ya
     resetSelection();
     optionsScreen.classList.add("hidden");
     legajoScreen.classList.remove("hidden");
 
-    // 3) Encolo y mando "en background"
+    // 3) cola + envío
     enqueue(payload);
     flushQueueOnce();
 
-    // 4) Reactivar botón (sin esperar red)
+    // 4) reactivar
     setTimeout(() => {
       btnEnviar.disabled = false;
       btnEnviar.innerText = prevText;
@@ -523,9 +493,8 @@ document.addEventListener("DOMContentLoaded", () => {
   renderSummary();
   renderMatrizInfoForCajon();
 
-  // cada vez que vuelve la app al frente, intentamos enviar 1 pendiente
   window.addEventListener("focus", () => flushQueueOnce());
 
-  console.log("app.js cargado OK ✅ (cookies + envío rápido)");
+  console.log("app.js cargado OK ✅ (localStorage + envío rápido)");
 
 });
