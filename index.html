@@ -99,7 +99,8 @@ button{
 </div>
 
 <script>
-const GOOGLE_SCRIPT_URL = "https://forms.elias-page.com/webhook/5079687e-673d-447d-af4c-81bc22af1747";
+// ✅ PONÉ ACÁ la URL del Web App de Apps Script (la que termina en /exec)
+const GOOGLE_SHEET_WEBAPP_URL = "https://script.google.com/macros/s/AKfycbzYT9Wz7RaTpHiG3aHrO9tkhkwyj4yBZsEdj9xrsQy9VxGs_B1Cee0vor508VYa1fME/execP";
 
 // ELEMENTOS
 const legajoScreen   = document.getElementById("legajoScreen");
@@ -157,7 +158,7 @@ function render(){
 
 // NAVEGACIÓN
 function goToOptions(){
-  if(!legajoInput.value.trim()){
+  if(!legajoInput.value.toString().trim()){
     alert("Ingresá el número de legajo");
     return;
   }
@@ -194,7 +195,7 @@ function resetSelection(){
   error.innerText="";
 }
 
-// ENVÍO A N8N
+// ENVÍO A GOOGLE SHEET (vía Apps Script Web App)
 async function send(){
   if(!selected) return;
 
@@ -206,22 +207,26 @@ async function send(){
   }
 
   const payload = {
-    legajo: legajoInput.value.trim(),
+    legajo: legajoInput.value.toString().trim(),
     opcion: selected.code,
     descripcion: selected.desc,
     texto,
-    ts: new Date().toISOString()
+    // Para Argentina (UTC-3) guardo timestamp legible local también
+    ts_iso_utc: new Date().toISOString(),
+    ts_local_ar: new Date().toLocaleString("es-AR", { timeZone: "America/Argentina/Buenos_Aires" })
   };
 
   try{
-    const res = await fetch(GOOGLE_SCRIPT_URL,{
-      method:"POST",
-      headers:{"Content-Type":"application/json"},
-      body:JSON.stringify(payload)
+    const res = await fetch(GOOGLE_SHEET_WEBAPP_URL, {
+      method: "POST",
+      headers: { "Content-Type":"application/json" },
+      body: JSON.stringify(payload)
     });
 
-    if(!res.ok){
-      error.innerText=`Error ${res.status}. Avisá al supervisor.`;
+    const data = await res.json().catch(()=> ({}));
+
+    if(!res.ok || !data.ok){
+      error.innerText = data.error ? `Error: ${data.error}` : `Error ${res.status}. Avisá al supervisor.`;
       return;
     }
 
@@ -232,7 +237,7 @@ async function send(){
     legajoScreen.classList.remove("hidden");
     legajoInput.value="";
 
-  }catch{
+  }catch(e){
     error.innerText="No se pudo enviar. Revisá WiFi.";
   }
 }
