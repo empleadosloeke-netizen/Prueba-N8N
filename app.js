@@ -97,9 +97,14 @@ document.addEventListener("DOMContentLoaded", () => {
     {code:"RD",desc:"Rollo Fleje Doblado",row:3,input:{show:false}}
   ];
 
-  const NON_DOWNTIME_CODES = new Set(["Perm","RM","RD"]);
+  // ✅ NO son tiempos muertos
+  const NON_DOWNTIME_CODES = new Set(["E","C","Perm","RM","RD"]);
   const isDowntime = (op) => !NON_DOWNTIME_CODES.has(op);
-  const sameDowntime = (a,b) => a && b && String(a.opcion)===String(b.opcion) && String(a.texto||"")===String(b.texto||"");
+
+  const sameDowntime = (a,b) =>
+    a && b &&
+    String(a.opcion) === String(b.opcion) &&
+    String(a.texto || "") === String(b.texto || "");
 
   let selected = null;
 
@@ -306,16 +311,33 @@ document.addEventListener("DOMContentLoaded", () => {
     return "";
   }
 
-  /* ================= VALIDACIÓN TIEMPO MUERTO ================= */
+  /* ================= VALIDACIÓN TIEMPO MUERTO =================
+     ✅ NUEVO: si hay TM pendiente, BLOQUEA también E y C.
+     Solo permite:
+       - el MISMO TM (para cerrarlo)
+       - Perm / RM / RD
+  ============================================================ */
   function validateBeforeSend(legajo, payload) {
     const s = readStateForLegajo(legajo);
     const ld = s.lastDowntime;
-    if (!ld) return { ok:true };
-    if (!isDowntime(payload.opcion)) return { ok:true };
 
-    if (!sameDowntime(ld, payload)) {
-      return { ok:false, msg:`Hay un "Tiempo Muerto" pendiente (${ld.opcion}${ld.texto ? " " + ld.texto : ""}).\nSolo podés enviar el MISMO tiempo muerto, o enviar E / C / Perm / RM / RD.` };
+    if (!ld) return { ok:true };
+
+    // Perm/RM/RD siempre permitidos
+    if (payload.opcion === "Perm" || payload.opcion === "RM" || payload.opcion === "RD") {
+      return { ok:true };
     }
+
+    // Si no es el mismo TM, bloquea (incluye E y C)
+    if (!sameDowntime(ld, payload)) {
+      return {
+        ok:false,
+        msg:`Hay un "Tiempo Muerto" pendiente (${ld.opcion}${ld.texto ? " " + ld.texto : ""}).\n` +
+            `Solo podés enviar el MISMO tiempo muerto para cerrarlo, o enviar Perm / RM / RD.`
+      };
+    }
+
+    // Si es el mismo TM (2da vez), permitimos y marcamos
     return { ok:true, isSecondSameDowntime:true, downtimeTs: ld.ts || "" };
   }
 
@@ -344,7 +366,7 @@ document.addEventListener("DOMContentLoaded", () => {
       return;
     }
 
-    if (NON_DOWNTIME_CODES.has(payload.opcion)) {
+    if (payload.opcion === "Perm" || payload.opcion === "RM" || payload.opcion === "RD") {
       s.lastDowntime = null;
       writeStateForLegajo(legajo, s);
       return;
@@ -372,7 +394,6 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // ✅ FIX DUPLICADOS: candado
   let isFlushing = false;
 
   async function flushQueueOnce() {
@@ -386,7 +407,7 @@ document.addEventListener("DOMContentLoaded", () => {
       const item = q[0];
       await postToSheet(item);
       dequeueOne();
-    } catch (e) {
+    } catch {
       // queda pendiente
     } finally {
       isFlushing = false;
@@ -417,12 +438,9 @@ document.addEventListener("DOMContentLoaded", () => {
       "Hs Inicio": ""
     };
 
-    // ✅ ID único del evento (sirve para dedupe futuro)
-    payload.eventId = `${payload.legajo}|${payload.opcion}|${payload.texto||""}|${payload.tsEvent}`;
-
     const stateBefore = readStateForLegajo(legajo);
 
-    // ✅ Bloqueo: no permitir C si no hay matriz
+    // Bloqueo: no permitir C sin matriz (igual sigue)
     if (payload.opcion === "C") {
       if (!stateBefore.lastMatrix || !stateBefore.lastMatrix.ts) {
         alert('Primero tenés que enviar "E (Empecé Matriz)" antes de registrar un Cajón.');
@@ -434,7 +452,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const v = validateBeforeSend(legajo, payload);
     if (!v.ok) { alert(v.msg); return; }
 
-    // ✅ 2da vez del mismo TM: Hs Inicio = ts del TM pendiente
+    // 2da vez mismo TM: Hs Inicio = ts del TM pendiente
     if (v.isSecondSameDowntime) {
       payload["Hs Inicio"] = v.downtimeTs || "";
     }
@@ -443,16 +461,13 @@ document.addEventListener("DOMContentLoaded", () => {
     const prev = btnEnviar.innerText;
     btnEnviar.innerText = "Enviando...";
 
-    // 1) Actualizo estado local YA
     updateStateAfterSend(legajo, payload);
     renderSummary();
 
-    // 2) Vuelvo YA
     resetSelection();
     optionsScreen.classList.add("hidden");
     legajoScreen.classList.remove("hidden");
 
-    // 3) Encolo + intento enviar 1
     enqueue(payload);
     flushQueueOnce();
 
@@ -482,5 +497,5 @@ document.addEventListener("DOMContentLoaded", () => {
   renderOptions();
   renderSummary();
 
-  console.log("app.js OK ✅ (estado por legajo + no duplicados + Hs Inicio)");
+  console.log("app.js OK ✅ (bloquea E y C si hay TM pendiente)");
 });
