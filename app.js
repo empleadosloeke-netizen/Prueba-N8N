@@ -1,7 +1,7 @@
 document.addEventListener("DOMContentLoaded", () => {
 
   const GOOGLE_SHEET_WEBAPP_URL =
-    "https://script.google.com/macros/s/AKfycbx2geVAhLh3h4wlDU9DqbKWqJ42OW1yI8cPP9c3kFfoiLRblqPZxm-8tgPSfJXKgps/exec";
+    "https://script.google.com/macros/s/AKfycbwbYx8fqFvG3MeKzLOSpbAJ0mZL1P2mVcKFIneXCOh6iqg8K_RbSwGofIJZMHJHITJy/exec";
 
   /* ================= TIEMPO UNIFICADO (cliente) ================= */
   function isoNowSeconds() {
@@ -81,7 +81,7 @@ document.addEventListener("DOMContentLoaded", () => {
     {code:"RD",desc:"Rollo Fleje Doblado",row:3,input:{show:false}}
   ];
 
-  const NON_DOWNTIME_CODES = new Set(["E","C","Perm","RM","RD"]);
+  const NON_DOWNTIME_CODES = new Set(["Perm","RM","RD"]);
 
   function isDowntime(payload) {
     return !NON_DOWNTIME_CODES.has(payload.opcion);
