@@ -1,12 +1,11 @@
 document.addEventListener("DOMContentLoaded", () => {
 
   const GOOGLE_SHEET_WEBAPP_URL =
-    "https://script.google.com/macros/s/AKfycbxiHeVn8ZveqU0QO6ZJeCE1rNSm9s73ruPiicU5a21sg156ES98fOB1akrHsi8nvYJo/exec";
+    "https://script.google.com/macros/s/AKfycbwbYx8fqFvG3MeKzLOSpbAJ0mZL1P2mVcKFIneXCOh6iqg8K_RbSwGofIJZMHJHITJy/exec";
 
   /* ================= LIMPIEZA (1 vez) ================= */
   const MIGRATION_FLAG = "prod_migrated_v1";
   if (!localStorage.getItem(MIGRATION_FLAG)) {
-    // posibles claves viejas de pruebas anteriores
     [
       "prod_day_state_ls_v1",
       "prod_send_queue_ls_v1",
@@ -19,28 +18,35 @@ document.addEventListener("DOMContentLoaded", () => {
   }
   /* ==================================================== */
 
+  /* ================= TIEMPO ================= */
   function isoNowSeconds() {
     const d = new Date();
     d.setMilliseconds(0);
     return d.toISOString();
   }
+
   function formatDateTimeAR(iso) {
-    try { return new Date(iso).toLocaleString("es-AR", { timeZone: "America/Argentina/Buenos_Aires" }); }
-    catch { return ""; }
+    try {
+      return new Date(iso).toLocaleString("es-AR", { timeZone: "America/Argentina/Buenos_Aires" });
+    } catch {
+      return "";
+    }
   }
+
   function todayKeyAR() {
     return new Date().toLocaleDateString("es-AR", { timeZone: "America/Argentina/Buenos_Aires" });
   }
 
+  /* ================= ELEMENTOS ================= */
   const $ = (id) => document.getElementById(id);
 
   const legajoScreen  = $("legajoScreen");
   const optionsScreen = $("optionsScreen");
   const legajoInput   = $("legajoInput");
 
-  const btnContinuar      = $("btnContinuar");
-  const btnBackTop        = $("btnBackTop");
-  const btnBackLabel      = $("btnBackLabel");
+  const btnContinuar = $("btnContinuar");
+  const btnBackTop   = $("btnBackTop");
+  const btnBackLabel = $("btnBackLabel");
 
   const row1 = $("row1");
   const row2 = $("row2");
@@ -53,8 +59,8 @@ document.addEventListener("DOMContentLoaded", () => {
   const inputLabel   = $("inputLabel");
   const textInput    = $("textInput");
   const btnResetSelection = $("btnResetSelection");
-  const btnEnviar = $("btnEnviar");
-  const error = $("error");
+  const btnEnviar    = $("btnEnviar");
+  const error        = $("error");
 
   const daySummary = $("daySummary");
   const matrizInfo = $("matrizInfo");
@@ -74,6 +80,7 @@ document.addEventListener("DOMContentLoaded", () => {
     return;
   }
 
+  /* ================= OPCIONES ================= */
   const OPTIONS = [
     {code:"E",desc:"Empecé Matriz",row:1,input:{show:true,label:"Ingresar número",placeholder:"Ejemplo: 110",validate:/^[0-9]+$/}},
     {code:"C",desc:"Cajón",row:1,input:{show:true,label:"Ingresar número",placeholder:"Ejemplo: 1500",validate:/^[0-9]+$/}},
@@ -100,8 +107,13 @@ document.addEventListener("DOMContentLoaded", () => {
   const LS_PREFIX = "prod_state_v1";
   const LS_QUEUE  = "prod_queue_v1";
 
-  function legajoKey() { return String(legajoInput.value || "").trim(); }
-  function stateKeyFor(legajo) { return `${LS_PREFIX}::${todayKeyAR()}::${String(legajo).trim()}`; }
+  function legajoKey() {
+    return String(legajoInput.value || "").trim();
+  }
+
+  function stateKeyFor(legajo) {
+    return `${LS_PREFIX}::${todayKeyAR()}::${String(legajo).trim()}`;
+  }
 
   function freshState() {
     return { lastMatrix:null, lastCajon:null, lastDowntime:null, last2:[] };
@@ -127,6 +139,7 @@ document.addEventListener("DOMContentLoaded", () => {
     localStorage.setItem(stateKeyFor(legajo), JSON.stringify(state));
   }
 
+  /* ================= COLA PENDIENTES ================= */
   function readQueue() {
     try {
       const raw = localStorage.getItem(LS_QUEUE);
@@ -137,12 +150,25 @@ document.addEventListener("DOMContentLoaded", () => {
       return [];
     }
   }
-  function writeQueue(arr) { localStorage.setItem(LS_QUEUE, JSON.stringify(arr.slice(-50))); }
-  function enqueue(payload) { const q=readQueue(); q.push(payload); writeQueue(q); }
-  function dequeueOne(){ const q=readQueue(); const it=q.shift(); writeQueue(q); return it; }
-  function queueLength(){ return readQueue().length; }
+  function writeQueue(arr) {
+    localStorage.setItem(LS_QUEUE, JSON.stringify(arr.slice(-50)));
+  }
+  function enqueue(payload) {
+    const q = readQueue();
+    q.push(payload);
+    writeQueue(q);
+  }
+  function dequeueOne() {
+    const q = readQueue();
+    const item = q.shift();
+    writeQueue(q);
+    return item;
+  }
+  function queueLength() {
+    return readQueue().length;
+  }
 
-  /* ================= UI ================= */
+  /* ================= UI: RESUMEN ================= */
   function renderSummary() {
     const leg = legajoKey();
 
@@ -202,6 +228,7 @@ document.addEventListener("DOMContentLoaded", () => {
       matrizInfo.innerHTML = "";
       return;
     }
+
     const s = readStateForLegajo(leg);
     const lm = s.lastMatrix;
 
@@ -210,11 +237,13 @@ document.addEventListener("DOMContentLoaded", () => {
       matrizInfo.innerHTML = `⚠️ No hay matriz registrada hoy.<br><small>Enviá primero "E (Empecé Matriz)"</small>`;
       return;
     }
+
     matrizInfo.innerHTML =
       `Matriz en uso: <span style="font-size:22px;">${lm.texto}</span>
        <small>Última matriz: ${lm.ts ? formatDateTimeAR(lm.ts) : ""}</small>`;
   }
 
+  /* ================= RENDER OPCIONES ================= */
   function renderOptions() {
     row1.innerHTML=""; row2.innerHTML=""; row3.innerHTML="";
     OPTIONS.forEach(o=>{
@@ -226,18 +255,21 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
+  /* ================= NAVEGACIÓN ================= */
   function goToOptions() {
     if (!legajoKey()) { alert("Ingresá el número de legajo"); return; }
     legajoScreen.classList.add("hidden");
     optionsScreen.classList.remove("hidden");
     renderMatrizInfoForCajon();
   }
+
   function backToLegajo() {
     optionsScreen.classList.add("hidden");
     legajoScreen.classList.remove("hidden");
     renderSummary();
   }
 
+  /* ================= SELECCIÓN ================= */
   function selectOption(opt) {
     selected = opt;
     selectedArea.classList.remove("hidden");
@@ -254,6 +286,7 @@ document.addEventListener("DOMContentLoaded", () => {
       inputArea.classList.add("hidden");
       textInput.placeholder = "";
     }
+
     renderMatrizInfoForCajon();
   }
 
@@ -266,23 +299,27 @@ document.addEventListener("DOMContentLoaded", () => {
     matrizInfo.innerHTML = "";
   }
 
+  /* ================= REGLAS Hs Inicio ================= */
   function computeHsInicioForC(state) {
     if (state.lastCajon && state.lastCajon.ts) return state.lastCajon.ts;
     if (state.lastMatrix && state.lastMatrix.ts) return state.lastMatrix.ts;
     return "";
   }
 
+  /* ================= VALIDACIÓN TIEMPO MUERTO ================= */
   function validateBeforeSend(legajo, payload) {
     const s = readStateForLegajo(legajo);
     const ld = s.lastDowntime;
     if (!ld) return { ok:true };
     if (!isDowntime(payload.opcion)) return { ok:true };
+
     if (!sameDowntime(ld, payload)) {
       return { ok:false, msg:`Hay un "Tiempo Muerto" pendiente (${ld.opcion}${ld.texto ? " " + ld.texto : ""}).\nSolo podés enviar el MISMO tiempo muerto, o enviar E / C / Perm / RM / RD.` };
     }
     return { ok:true, isSecondSameDowntime:true, downtimeTs: ld.ts || "" };
   }
 
+  /* ================= ACTUALIZAR ESTADO ================= */
   function updateStateAfterSend(legajo, payload) {
     const s = readStateForLegajo(legajo);
     const item = { opcion:payload.opcion, descripcion:payload.descripcion, texto:payload.texto||"", ts:payload.tsEvent };
@@ -324,6 +361,7 @@ document.addEventListener("DOMContentLoaded", () => {
     writeStateForLegajo(legajo, s);
   }
 
+  /* ================= ENVÍO ================= */
   async function postToSheet(payload) {
     return fetch(GOOGLE_SHEET_WEBAPP_URL, {
       method:"POST",
@@ -334,15 +372,26 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
+  // ✅ FIX DUPLICADOS: candado
+  let isFlushing = false;
+
   async function flushQueueOnce() {
-    const q = readQueue();
-    if (!q.length) return;
-    const item = q[0];
+    if (isFlushing) return;
+    isFlushing = true;
+
     try {
+      const q = readQueue();
+      if (!q.length) return;
+
+      const item = q[0];
       await postToSheet(item);
       dequeueOne();
-    } catch {}
-    renderSummary();
+    } catch (e) {
+      // queda pendiente
+    } finally {
+      isFlushing = false;
+      renderSummary();
+    }
   }
 
   async function sendFast() {
@@ -368,8 +417,12 @@ document.addEventListener("DOMContentLoaded", () => {
       "Hs Inicio": ""
     };
 
+    // ✅ ID único del evento (sirve para dedupe futuro)
+    payload.eventId = `${payload.legajo}|${payload.opcion}|${payload.texto||""}|${payload.tsEvent}`;
+
     const stateBefore = readStateForLegajo(legajo);
 
+    // ✅ Bloqueo: no permitir C si no hay matriz
     if (payload.opcion === "C") {
       if (!stateBefore.lastMatrix || !stateBefore.lastMatrix.ts) {
         alert('Primero tenés que enviar "E (Empecé Matriz)" antes de registrar un Cajón.');
@@ -381,6 +434,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const v = validateBeforeSend(legajo, payload);
     if (!v.ok) { alert(v.msg); return; }
 
+    // ✅ 2da vez del mismo TM: Hs Inicio = ts del TM pendiente
     if (v.isSecondSameDowntime) {
       payload["Hs Inicio"] = v.downtimeTs || "";
     }
@@ -389,13 +443,16 @@ document.addEventListener("DOMContentLoaded", () => {
     const prev = btnEnviar.innerText;
     btnEnviar.innerText = "Enviando...";
 
+    // 1) Actualizo estado local YA
     updateStateAfterSend(legajo, payload);
     renderSummary();
 
+    // 2) Vuelvo YA
     resetSelection();
     optionsScreen.classList.add("hidden");
     legajoScreen.classList.remove("hidden");
 
+    // 3) Encolo + intento enviar 1
     enqueue(payload);
     flushQueueOnce();
 
@@ -405,6 +462,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }, 250);
   }
 
+  /* ================= EVENTOS ================= */
   btnContinuar.addEventListener("click", goToOptions);
   btnBackTop.addEventListener("click", backToLegajo);
   btnBackLabel.addEventListener("click", backToLegajo);
@@ -420,8 +478,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
   window.addEventListener("focus", () => flushQueueOnce());
 
+  /* ================= INIT ================= */
   renderOptions();
   renderSummary();
 
-  console.log("app.js OK ✅ (estado por legajo + limpieza + Hs Inicio)");
+  console.log("app.js OK ✅ (estado por legajo + no duplicados + Hs Inicio)");
 });
