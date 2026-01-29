@@ -1,7 +1,7 @@
 document.addEventListener("DOMContentLoaded", () => {
 
   const GOOGLE_SHEET_WEBAPP_URL =
-    "https://script.google.com/macros/s/AKfycbyhC-nQFS5QilP3-gTyNINkN2Lwfit6SDYvxE9-F4u_kKR4W8RYALQ2sO7EG0QSQngA/exec";
+    "https://script.google.com/macros/s/AKfycbw3uhNP6Mp9UGZTUsjs8KDhgQmSw6crBBBpq6wd79d_FTtIjSmbzE9XNJaIyUmr3lY/exec";
 
   /* ================= LIMPIEZA (1 vez) ================= */
   const MIGRATION_FLAG = "prod_migrated_v1";
@@ -97,7 +97,7 @@ document.addEventListener("DOMContentLoaded", () => {
     {code:"RD",desc:"Rollo Fleje Doblado",row:3,input:{show:false}}
   ];
 
-  const NON_DOWNTIME_CODES = new Set(["E","C","Perm","RM","RD"]);
+  const NON_DOWNTIME_CODES = new Set(["Perm","RM","RD"]);
   const isDowntime = (op) => !NON_DOWNTIME_CODES.has(op);
   const sameDowntime = (a,b) => a && b && String(a.opcion)===String(b.opcion) && String(a.texto||"")===String(b.texto||"");
 
