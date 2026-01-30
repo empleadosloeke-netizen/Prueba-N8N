@@ -319,7 +319,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     if (!ld) return { ok:true };
 
-    if (payload.opcion === "Perm" || payload.opcion === "RM" || payload.opcion === "RD") {
+    if (payload.opcion === "RM" || payload.opcion === "RD") {
       return { ok:true };
     }
 
@@ -327,7 +327,7 @@ document.addEventListener("DOMContentLoaded", () => {
       return {
         ok:false,
         msg:`Hay un "Tiempo Muerto" pendiente (${ld.opcion}${ld.texto ? " " + ld.texto : ""}).\n` +
-            `Solo podés enviar el MISMO tiempo muerto para cerrarlo, o enviar Perm / RM / RD.`
+            `Solo podés enviar el MISMO tiempo muerto para cerrarlo, o  RM / RD.`
       };
     }
 
