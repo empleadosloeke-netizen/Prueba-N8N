@@ -98,8 +98,8 @@ document.addEventListener("DOMContentLoaded", () => {
     {code:"RD",desc:"Rollo Fleje Doblado",row:3,input:{show:false}}
   ];
 
-  // ✅ NO son tiempos muertos
-  const NON_DOWNTIME_CODES = new Set(["E","C","Perm","RM","RD"]);
+  // ✅ NO son tiempos muertos (pero OJO: Perm ahora SÍ se trata como TM "doble envío")
+  const NON_DOWNTIME_CODES = new Set(["E","C","RM","RD"]);
   const isDowntime = (op) => !NON_DOWNTIME_CODES.has(op);
 
   const sameDowntime = (a,b) =>
@@ -312,25 +312,33 @@ document.addEventListener("DOMContentLoaded", () => {
     return "";
   }
 
-  /* ================= VALIDACIÓN TM ================= */
+  /* ================= VALIDACIÓN TM =================
+     Si hay TM pendiente:
+       - SOLO se permite enviar el MISMO TM para cerrarlo
+       - RM/RD se permiten (siempre), pero Perm NO
+       - todo lo demás se bloquea (incluye E/C/Perm)
+  =================================================== */
   function validateBeforeSend(legajo, payload) {
     const s = readStateForLegajo(legajo);
     const ld = s.lastDowntime;
 
     if (!ld) return { ok:true };
 
+    // RM/RD permitidos aún con TM pendiente
     if (payload.opcion === "RM" || payload.opcion === "RD") {
       return { ok:true };
     }
 
+    // si no es el mismo TM => bloquea (incluye Perm)
     if (!sameDowntime(ld, payload)) {
       return {
         ok:false,
         msg:`Hay un "Tiempo Muerto" pendiente (${ld.opcion}${ld.texto ? " " + ld.texto : ""}).\n` +
-            `Solo podés enviar el MISMO tiempo muerto para cerrarlo, o  RM / RD.`
+            `Solo podés enviar el MISMO tiempo muerto para cerrarlo, o enviar RM / RD.`
       };
     }
 
+    // mismo TM por 2da vez
     return { ok:true, isSecondSameDowntime:true, downtimeTs: ld.ts || "" };
   }
 
@@ -359,15 +367,17 @@ document.addEventListener("DOMContentLoaded", () => {
       return;
     }
 
+    // RM/RD limpian TM pendiente
     if (payload.opcion === "RM" || payload.opcion === "RD") {
       s.lastDowntime = null;
       writeStateForLegajo(legajo, s);
       return;
     }
 
+    // Tiempo muerto: requiere doble envío
     if (isDowntime(payload.opcion)) {
       if (!s.lastDowntime) s.lastDowntime = item;
-      else if (sameDowntime(s.lastDowntime, payload)) s.lastDowntime = null;
+      else if (sameDowntime(s.lastDowntime, payload)) s.lastDowntime = null; // 2da vez mismo TM => limpia
       else s.lastDowntime = item;
       writeStateForLegajo(legajo, s);
       return;
@@ -455,7 +465,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const v = validateBeforeSend(legajo, payload);
     if (!v.ok) { alert(v.msg); return; }
 
-    // 2da vez mismo TM: Hs Inicio = ts del TM pendiente
+    // ✅ 2da vez mismo TM: Hs Inicio = ts del TM pendiente
     if (v.isSecondSameDowntime) {
       payload["Hs Inicio"] = v.downtimeTs || "";
     }
@@ -500,5 +510,5 @@ document.addEventListener("DOMContentLoaded", () => {
   renderOptions();
   renderSummary();
 
-  console.log("app.js OK ✅ (RM/RD mandan matriz + Hs Inicio propio)");
+  console.log("app.js OK ✅ (Perm = TM doble envío, RM/RD permitidos, bloqueo por TM pendiente)");
 });
